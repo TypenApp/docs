@@ -1,0 +1,40 @@
+name: Docs CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  lint-docs:
+    name: Verify Markdown guides & relative links
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Check required guides and relative links
+        run: |
+          python - <<'PY'
+          import pathlib, re
+          root = pathlib.Path(".")
+          required = [
+              "README.md",
+              "getting-started.md",
+              "core-engine.md",
+              "customisation.md",
+              "productivity.md",
+              "ai-intelligence.md",
+              "security-privacy.md",
+              "open-source.md",
+              "cli-reference.md",
+          ]
+          for name in required:
+              p = root / name
+              assert p.exists() and p.stat().st_size > 200, f"Missing or empty: {name}"
+          readme = (root / "README.md").read_text(encoding="utf-8")
+          for link in re.findall(r"\]\(([a-z0-9-]+\.md)\)", readme):
+              assert (root / link).exists(), f"Broken link in README.md: {link}"
+          print(f"Verified {len(required)} documentation files.")
+          PY
